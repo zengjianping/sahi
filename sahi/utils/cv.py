@@ -309,7 +309,7 @@ def get_video_reader(
     video_capture = cv2.VideoCapture(source)
 
     num_frames = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
-    if view_visual:
+    if True or view_visual:
         num_frames /= frame_skip_interval + 1
         num_frames = int(num_frames)
 
@@ -324,7 +324,7 @@ def get_video_reader(
                 frame_num = video_capture.get(cv2.CAP_PROP_POS_FRAMES)
                 video_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_num + frame_skip_interval)
 
-                k = cv2.waitKey(20)
+                k = cv2.waitKey(5)
                 frame_num = video_capture.get(cv2.CAP_PROP_POS_FRAMES)
 
                 if k == 27:
@@ -365,7 +365,7 @@ def get_video_reader(
             fps = video_capture.get(cv2.CAP_PROP_FPS)  # original fps of video
             # The fps of export video is increasing during view_image because frame is skipped
             fps = (
-                fps / frame_skip_interval
+                fps / (frame_skip_interval + 1)
             )  # How many time_interval equals to original fps. One time_interval skip x frames.
         else:
             fps = video_capture.get(cv2.CAP_PROP_FPS)
@@ -534,7 +534,8 @@ def visualize_object_predictions(
     else:
         colors = None
     # set rect_th for boxes
-    rect_th = rect_th or max(round(sum(image.shape) / 2 * 0.003), 2)
+    #rect_th = rect_th or max(round(sum(image.shape) / 2 * 0.003), 2)
+    rect_th = rect_th or max(round(image.shape[0] * 0.003), 2)
     # set text_th for category names
     text_th = text_th or max(rect_th - 1, 1)
     # set text_size for category names

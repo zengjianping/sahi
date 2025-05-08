@@ -734,7 +734,7 @@ def predict(
 
         # render video inference
         if view_video:
-            cv2.imshow("Prediction of {}".format(str(video_file_name)), result["image"])
+            cv2.imshow("Prediction of {}".format(str(video_file_name)), result["image"][:,:,::-1])
             cv2.waitKey(1)
 
         time_end = time.time() - time_start

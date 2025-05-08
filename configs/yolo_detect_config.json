@@ -1,0 +1,18 @@
+{
+    "classes": [0,1,2],
+    "image_size": 640,
+    "thres_conf": 0.3,
+    "thres_iou": 0.5,
+    "max_det": 100,
+    "save_image": true,
+    "save_txt": true,
+    "save_conf": true,
+    "show_video": false,
+    "show_image": true,
+    "show_label": true,
+    "show_conf": true,
+    "use_sahi": true,
+    "slice_size": 640,
+    "overlap_ratio": 0.2,
+    "frame_skip_interval": 0
+}
