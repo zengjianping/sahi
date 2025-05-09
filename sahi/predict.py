@@ -710,7 +710,8 @@ def predict(
         # export prediction list as pickle
         if export_pickle:
             save_path = str(pickle_dir / Path(relative_filepath).parent / (filename_without_extension + ".pickle"))
-            save_pickle(data=object_prediction_list, save_path=save_path)
+            pickle_data = {'image_size': list(image_as_pil.size), 'predictions': object_prediction_list}
+            save_pickle(data=pickle_data, save_path=save_path)
 
         # export visualization
         if not novisual or view_video:

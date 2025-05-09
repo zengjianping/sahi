@@ -1,5 +1,5 @@
 {
-    "classes": [0,1,2],
+    "class_map": {"plane":0,"car":1,"person":2},
     "image_size": 640,
     "thres_conf": 0.3,
     "thres_iou": 0.5,
