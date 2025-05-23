@@ -107,9 +107,10 @@ def get_prediction(
 
     # read image as pil
     image_as_pil = read_image_as_pil(image)
+    image_np = np.ascontiguousarray(image_as_pil)
     # get prediction
     time_start = time.time()
-    detection_model.perform_inference(np.ascontiguousarray(image_as_pil))
+    detection_model.perform_inference(image_np)
     time_end = time.time() - time_start
     durations_in_seconds["prediction"] = time_end
 
@@ -164,6 +165,10 @@ def get_sliced_prediction(
     slice_dir: Optional[str] = None,
     exclude_classes_by_name: Optional[List[str]] = None,
     exclude_classes_by_id: Optional[List[int]] = None,
+    grid_height: int = 0,
+    grid_width: int = 0,
+    zoom_height: int = 0,
+    zoom_width: int = 0,
 ) -> PredictionResult:
     """
     Function for slice image + get predicion for each slice + combine predictions in full image.
@@ -241,6 +246,11 @@ def get_sliced_prediction(
         overlap_height_ratio=overlap_height_ratio,
         overlap_width_ratio=overlap_width_ratio,
         auto_slice_resolution=auto_slice_resolution,
+        grid_height=grid_height,
+        grid_width=grid_width,
+        zoom_height=zoom_height,
+        zoom_width=zoom_width,
+        verbose=verbose>1
     )
     from sahi.models.ultralytics import UltralyticsDetectionModel
 
@@ -283,8 +293,8 @@ def get_sliced_prediction(
             detection_model=detection_model,
             shift_amount=shift_amount_list[0],
             full_shape=[
-                slice_image_result.original_image_height,
-                slice_image_result.original_image_width,
+                slice_image_result.zoom_image_height,
+                slice_image_result.zoom_image_width,
             ],
             exclude_classes_by_name=exclude_classes_by_name,
             exclude_classes_by_id=exclude_classes_by_id,
@@ -317,6 +327,18 @@ def get_sliced_prediction(
     # merge matching predictions
     if len(object_prediction_list) > 1:
         object_prediction_list = postprocess(object_prediction_list)
+    
+    if slice_image_result.original_image_height != slice_image_result.zoom_image_height or \
+        slice_image_result.original_image_width != slice_image_result.zoom_image_width:
+        zoom_ratio_y = slice_image_result.original_image_height / slice_image_result.zoom_image_height
+        zoom_ratio_x = slice_image_result.original_image_width / slice_image_result.zoom_image_width
+        
+        for idx in range(len(object_prediction_list)):
+            object_prediction:ObjectPrediction = object_prediction_list[idx]
+            object_prediction.bbox.minx = object_prediction.bbox.minx * zoom_ratio_x
+            object_prediction.bbox.miny = object_prediction.bbox.miny * zoom_ratio_y
+            object_prediction.bbox.maxx = object_prediction.bbox.maxx * zoom_ratio_x
+            object_prediction.bbox.maxy = object_prediction.bbox.maxy * zoom_ratio_y
 
     time_end = time.time() - time_start
     durations_in_seconds["prediction"] = time_end
@@ -415,6 +437,11 @@ def predict(
     force_postprocess_type: bool = False,
     exclude_classes_by_name: Optional[List[str]] = None,
     exclude_classes_by_id: Optional[List[int]] = None,
+    auto_slice_resolution: bool = True,
+    grid_height: int = 0,
+    grid_width: int = 0,
+    zoom_height: int = 0,
+    zoom_width: int = 0,
     **kwargs,
 ):
     """
@@ -542,6 +569,7 @@ def predict(
         image_iterator = [str(Path(source) / Path(coco_image.file_name)) for coco_image in coco.images]
         coco_json = []
     elif source and os.path.isdir(source):
+        video_file_name = 'results'
         image_iterator = list_files(directory=source, contains=IMAGE_EXTENSIONS, verbose=verbose)
     elif source and Path(source).suffix in VIDEO_EXTENSIONS:
         source_is_video = True
@@ -614,9 +642,14 @@ def predict(
                 postprocess_match_metric=postprocess_match_metric,
                 postprocess_match_threshold=postprocess_match_threshold,
                 postprocess_class_agnostic=postprocess_class_agnostic,
-                verbose=1 if verbose else 0,
+                verbose=verbose,
                 exclude_classes_by_name=exclude_classes_by_name,
                 exclude_classes_by_id=exclude_classes_by_id,
+                auto_slice_resolution=auto_slice_resolution,
+                grid_height=grid_height,
+                grid_width=grid_width,
+                zoom_height=zoom_height,
+                zoom_width=zoom_width,
             )
             object_prediction_list = prediction_result.object_prediction_list
             if prediction_result.durations_in_seconds:

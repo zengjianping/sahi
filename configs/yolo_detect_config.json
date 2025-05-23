@@ -2,7 +2,7 @@
     "class_map": {"plane":0,"car":1,"person":2},
     "image_size": 640,
     "thres_conf": 0.3,
-    "thres_iou": 0.5,
+    "thres_iou": 0.7,
     "max_det": 100,
     "save_image": true,
     "save_txt": true,
@@ -13,6 +13,11 @@
     "show_conf": true,
     "use_sahi": true,
     "slice_size": 640,
+    "grid_width": 12,
+    "grid_height": 1,
+    "zoom_width": 0,
+    "zoom_height": 640,
     "overlap_ratio": 0.2,
-    "frame_skip_interval": 0
+    "frame_skip_interval": 0,
+    "verbose": 0
 }

@@ -27,6 +27,42 @@ logging.basicConfig(
 MAX_WORKERS = 20
 
 
+def get_slice_bboxes_by_grid(imageHeight, imageWidth, sliceHeight, sliceWidth, gridHeight, gridWidth):
+    sliceRects = list()
+    xOverlap = 0
+    yOverlap = 0
+    
+    gridHeight = max(gridHeight, 1)
+    gridWidth = max(gridWidth, 1)
+
+    if (sliceHeight * gridHeight < imageHeight):
+        sliceHeight = (imageHeight + gridHeight - 1) // gridHeight
+    if (sliceWidth * gridWidth < imageWidth):
+        sliceWidth = (imageWidth + gridWidth - 1) // gridWidth
+    if (gridHeight > 1):
+        yOverlap = (sliceHeight * gridHeight - imageHeight) // (gridHeight - 1)
+        yOverlap = (yOverlap + 3) & ~3
+    if (gridWidth > 1):
+        xOverlap = (sliceWidth * gridWidth - imageWidth) // (gridWidth - 1)
+        xOverlap = (xOverlap + 3) & ~3
+
+    for i in range(gridHeight):
+        yMin = (sliceHeight - yOverlap) * i
+        yMax = yMin + sliceHeight
+        if (yMax > imageHeight or i == gridHeight-1):
+            yMax = imageHeight
+            yMin = yMax - sliceHeight
+        for j in range(gridWidth):
+            xMin = (sliceWidth - xOverlap) * j
+            xMax = xMin + sliceWidth
+            if (xMax > imageWidth or j == gridWidth-1):
+                xMax = imageWidth
+                xMin = xMax - sliceWidth
+            sliceRects.append([xMin, yMin, xMax, yMax])
+
+    #print(sliceRects)
+    return sliceRects
+
 def get_slice_bboxes(
     image_height: int,
     image_width: int,
@@ -162,7 +198,8 @@ class SlicedImage:
 
 
 class SliceImageResult:
-    def __init__(self, original_image_size: List[int], image_dir: Optional[str] = None):
+    def __init__(self, original_image_size: List[int], image_dir: Optional[str] = None,
+            zoom_image_size: List[int] = None):
         """
         image_dir: str
             Directory of the sliced image exports.
@@ -172,6 +209,13 @@ class SliceImageResult:
         self.original_image_height = original_image_size[0]
         self.original_image_width = original_image_size[1]
         self.image_dir = image_dir
+
+        if zoom_image_size is not None:
+            self.zoom_image_height = zoom_image_size[0]
+            self.zoom_image_width = zoom_image_size[1]
+        else:
+            self.zoom_image_height = 0
+            self.zoom_image_width = 0
 
         self._sliced_image_list: List[SlicedImage] = []
 
@@ -273,6 +317,10 @@ def slice_image(
     min_area_ratio: float = 0.1,
     out_ext: Optional[str] = None,
     verbose: bool = False,
+    grid_height: int = 0,
+    grid_width: int = 0,
+    zoom_height: int = 0,
+    zoom_width: int = 0,
 ) -> SliceImageResult:
     """Slice a large image into smaller windows. If output_file_name is given export
     sliced images.
@@ -333,20 +381,47 @@ def slice_image(
     image_width, image_height = image_pil.size
     if not (image_width != 0 and image_height != 0):
         raise RuntimeError(f"invalid image size: {image_pil.size} for 'slice_image'.")
-    slice_bboxes = get_slice_bboxes(
-        image_height=image_height,
-        image_width=image_width,
-        auto_slice_resolution=auto_slice_resolution,
-        slice_height=slice_height,
-        slice_width=slice_width,
-        overlap_height_ratio=overlap_height_ratio,
-        overlap_width_ratio=overlap_width_ratio,
-    )
+    
+    if zoom_height <= 0 and zoom_width <= 0:
+        zoom_width = image_width
+        zoom_height = image_height
+    else:
+        if zoom_width <= 0:
+            zoom_width = zoom_height * image_width // image_height
+        elif zoom_height <= 0:
+            zoom_height = zoom_width * image_height // image_width
+        zoom_width = (zoom_width + 2) & ~3
+        zoom_height = (zoom_height + 2) & ~3
+
+    if image_width == zoom_width or image_height != zoom_height:
+        image_pil = image_pil.resize((zoom_width, zoom_height))
+
+    if grid_height > 0 and grid_width > 0:
+        slice_bboxes = get_slice_bboxes_by_grid(
+            zoom_height, zoom_width,
+            slice_height, slice_width,
+            grid_height, grid_width
+        )
+    else:
+        slice_bboxes = get_slice_bboxes(
+            image_height=zoom_height,
+            image_width=zoom_width,
+            auto_slice_resolution=auto_slice_resolution,
+            slice_height=slice_height,
+            slice_width=slice_width,
+            overlap_height_ratio=overlap_height_ratio,
+            overlap_width_ratio=overlap_width_ratio,
+        )
+    if verbose:
+        print(f"Original image size: w-{image_width}, h-{image_height}")
+        print(f"Zoomed image size: w-{zoom_width}, h-{zoom_height}")
+        print(f'Slice bboxes: {slice_bboxes}')
 
     n_ims = 0
 
     # init images and annotations lists
-    sliced_image_result = SliceImageResult(original_image_size=[image_height, image_width], image_dir=output_dir)
+    sliced_image_result = SliceImageResult(original_image_size=[image_height, image_width],
+        zoom_image_size=[zoom_height, zoom_width], image_dir=output_dir)
 
     image_pil_arr = np.asarray(image_pil)
     # iterate over slices

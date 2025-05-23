@@ -42,11 +42,16 @@ def yolo_detect_object(input_path, model_path, config_file):
             model_category_mapping=None,
             model_category_remapping=None,
             source=input_path,
-            no_standard_prediction=False,
+            no_standard_prediction=True,
             no_sliced_prediction=False,
+            auto_slice_resolution=False,
             image_size=params.slice_size,
             slice_height=params.slice_size,
             slice_width=params.slice_size,
+            grid_height=params.grid_height,
+            grid_width=params.grid_width,
+            zoom_height=params.zoom_height,
+            zoom_width=params.zoom_width,
             overlap_height_ratio=params.overlap_ratio,
             overlap_width_ratio=params.overlap_ratio,
             postprocess_type="GREEDYNMM",
@@ -60,7 +65,7 @@ def yolo_detect_object(input_path, model_path, config_file):
             visual_hide_labels=not params.show_label,
             visual_hide_conf=not params.show_conf,
             export_pickle=True,
-            verbose=2,
+            verbose=params.verbose,
             return_dict=True
         )
         
