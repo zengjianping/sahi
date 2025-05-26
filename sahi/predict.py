@@ -169,6 +169,12 @@ def get_sliced_prediction(
     grid_width: int = 0,
     zoom_height: int = 0,
     zoom_width: int = 0,
+    view_video: bool = False,
+    visual_bbox_thickness: Optional[int] = None,
+    visual_text_size: Optional[float] = None,
+    visual_text_thickness: Optional[int] = None,
+    visual_hide_labels: bool = False,
+    visual_hide_conf: bool = False,
 ) -> PredictionResult:
     """
     Function for slice image + get predicion for each slice + combine predictions in full image.
@@ -299,6 +305,18 @@ def get_sliced_prediction(
             exclude_classes_by_name=exclude_classes_by_name,
             exclude_classes_by_id=exclude_classes_by_id,
         )
+        if view_video:
+            result = visualize_object_predictions(
+                np.ascontiguousarray(image_list[0]),
+                object_prediction_list=prediction_result.object_prediction_list,
+                rect_th=visual_bbox_thickness,
+                text_size=visual_text_size,
+                text_th=visual_text_thickness,
+                hide_labels=visual_hide_labels,
+                hide_conf=visual_hide_conf,
+            )
+            cv2.imshow(f"Prediction of slice {group_ind}", result["image"][:,:,::-1])
+
         # convert sliced predictions to full predictions
         for object_prediction in prediction_result.object_prediction_list:
             if object_prediction:  # if not empty
@@ -606,6 +624,7 @@ def predict(
     durations_in_seconds["prediction"] = 0
     durations_in_seconds["slice"] = 0
 
+    playPaused = True
     input_type_str = "video frames" if source_is_video else "images"
     for ind, image_path in enumerate(
         tqdm(image_iterator, f"Performing inference on {input_type_str}", total=num_frames)
@@ -650,6 +669,12 @@ def predict(
                 grid_width=grid_width,
                 zoom_height=zoom_height,
                 zoom_width=zoom_width,
+                view_video=view_video,
+                visual_bbox_thickness=visual_bbox_thickness,
+                visual_text_size=visual_text_size,
+                visual_text_thickness=visual_text_thickness,
+                visual_hide_labels=visual_hide_labels,
+                visual_hide_conf=visual_hide_conf,
             )
             object_prediction_list = prediction_result.object_prediction_list
             if prediction_result.durations_in_seconds:
@@ -769,7 +794,18 @@ def predict(
         # render video inference
         if view_video:
             cv2.imshow("Prediction of {}".format(str(video_file_name)), result["image"][:,:,::-1])
-            cv2.waitKey(1)
+            stepForward = False
+            waitOnce = True
+            while waitOnce or (playPaused and not stepForward):
+                key = cv2.waitKey(5)
+                if key == 27:
+                    break
+                elif key == ord(' '):
+                    playPaused = not playPaused
+                elif key == ord('f'):
+                    playPaused = True
+                    stepForward = True
+                waitOnce = False
 
         time_end = time.time() - time_start
         durations_in_seconds["export_files"] = time_end

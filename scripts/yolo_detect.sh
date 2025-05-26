@@ -10,6 +10,7 @@ MODEL_PATH="datas/models/kst_ir_yolo10m_v3.pt"
 #INPUT_PATH="datas/test_images/airport_nanning_d02_vis_01_unfold"
 INPUT_PATH="datas/test_images/airport_nanning_d02_ir_01"
 #INPUT_PATH="datas/test_videos/airport_nanning_d02_ir_01.mp4"
+INPUT_PATH="datas/test_datas/2025-05-26/rec_20250526085700_20250526090100.mp4"
 
 python scripts/yolo_detect.py \
     --config_file "$CONFIG_FILE" \
